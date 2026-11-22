@@ -482,6 +482,48 @@ TASKS.forEach(t => {
   taskList.appendChild(li);
 });
 
+/* ══════════════════════════════════════════════════════════════
+   НАДЕЖНЫЙ ЗВУК ПРИ НАВЕДЕНИИ НА ДЕТАЛИ
+   ══════════════════════════════════════════════════════════════ */
+// 1. Укажите имя или путь к вашему аудиофайлу:
+const SOUND_FILE = 'Клик 1.mp3'; 
+const SOUND_VOLUME = 0.25; // Громкость (от 0.0 до 1.0)
+
+// Разблокировка звука при первом клике/касании (требование браузеров)
+let audioUnlocked = false;
+function unlockAudio() {
+  audioUnlocked = true;
+  document.removeEventListener('click', unlockAudio);
+  document.removeEventListener('touchstart', unlockAudio);
+}
+document.addEventListener('click', unlockAudio);
+document.addEventListener('touchstart', unlockAudio);
+
+// Функция воспроизведения
+function playCustomHoverSound() {
+  const sound = new Audio(SOUND_FILE);
+  sound.volume = SOUND_VOLUME;
+  sound.play().catch(err => {
+    console.warn("Звук не воспроизвелся. Проверьте имя файла или кликните по странице.", err);
+  });
+}
+
+/* Отслеживание наведения мыши на иконки деталей */
+document.addEventListener('mouseover', e => {
+  const part = e.target.closest('.part');
+  if (part && !part.dataset.hovered) {
+    part.dataset.hovered = 'true';
+    playCustomHoverSound();
+  }
+});
+
+document.addEventListener('mouseout', e => {
+  const part = e.target.closest('.part');
+  if (part) {
+    delete part.dataset.hovered;
+  }
+});
+
 /* ---- рендер карточек ---- */
 const cardsEl = document.getElementById('cards');
 
