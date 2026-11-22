@@ -205,6 +205,16 @@
   body.tasks-open #taskPanel{transform:translateX(0);}
   #taskPanel h2{font-size:.95rem;letter-spacing:.3em;color:var(--neon);text-transform:uppercase;
     margin-bottom:22px;text-shadow:0 0 12px var(--neon-soft);}
+  /* Вводный текст над списком заданий */
+  .task-intro{
+    font-size: .88rem;
+    font-style: italic;
+    color: var(--text-dim);
+    line-height: 1.6;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px dashed rgba(255,45,45,.2);
+  }
   #taskPanel ol{list-style:none;counter-reset:t;}
   #taskPanel li{
     counter-increment:t;position:relative;
@@ -267,6 +277,9 @@
   <!-- Стрелка вызова списка заданий -->
   <button id="taskToggle" aria-label="Список заданий"><span class="arrow">❯</span></button>
   <aside id="taskPanel">
+    <p class="task-intro">
+      Здесь будет текст описания.
+    </p>
     <h2>◆ Испытания ◆</h2>
     <ol id="taskList"></ol>
   </aside>
