@@ -26,6 +26,9 @@
     background-image:
       radial-gradient(ellipse 60% 45% at 15% 0%, rgba(140,20,20,.10), transparent 60%),
       radial-gradient(ellipse 55% 40% at 90% 100%, rgba(140,20,20,.08), transparent 60%);
+    /* ДОБАВИТЬ ЭТИ 2 СТРОКИ ДЛЯ ЗАПРЕТА ВЫДЕЛЕНИЯ ТЕКСТА: */
+    -webkit-user-select: none;
+    user-select: none;
   }
   /* ---- фактурный шум поверх фона ---- */
   body::before{
@@ -599,6 +602,12 @@ function strike(){
   setTimeout(strike, 1800 + Math.random() * 5500);
 }
 setTimeout(strike, 1200);
+/* Блокировка контекстного меню и горячих клавиш копирования */
+document.addEventListener('copy', e => e.preventDefault());
+document.addEventListener('contextmenu', e => e.preventDefault());
+</script>
+</body>
+</html>
 </script>
 </body>
 </html>
