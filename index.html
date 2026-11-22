@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Адский Часовщик</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;0,900;1,400;1,500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0b0a10;
+    --neon: #ff2d2d;
+    --neon-soft: rgba(255,45,45,.35);
+    --text: #e9e3d6;
+    --text-dim: #968e7e;
+    --panel-w: 50vw;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{
+    font-family:'Playfair Display', Georgia, serif;
+    background:var(--bg);
+    color:var(--text);
+    min-height:100vh;
+    overflow-x:hidden;
+    background-image:
+      radial-gradient(ellipse 60% 45% at 15% 0%, rgba(140,20,20,.10), transparent 60%),
+      radial-gradient(ellipse 55% 40% at 90% 100%, rgba(140,20,20,.08), transparent 60%);
+  }
+  /* ---- фактурный шум поверх фона ---- */
+  body::before{
+    content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+    background-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/></filter><rect width="180" height="180" filter="url(%23n)"/></svg>');
+    opacity:.055;
+  }
+  /* ---- дрейфующий туман ---- */
+  .fog{position:fixed; border-radius:50%; filter:blur(90px); pointer-events:none; z-index:0;}
+  .fog.a{width:55vw;height:55vw;left:-15vw;top:-10vw;background:radial-gradient(circle,rgba(160,25,25,.12),transparent 65%);animation:drift1 40s ease-in-out infinite alternate;}
+  .fog.b{width:45vw;height:45vw;right:-10vw;bottom:-12vw;background:radial-gradient(circle,rgba(120,20,40,.10),transparent 65%);animation:drift2 55s ease-in-out infinite alternate;}
+  @keyframes drift1{to{transform:translate(9vw,6vh) scale(1.15);}}
+  @keyframes drift2{to{transform:translate(-8vw,-7vh) scale(1.1);}}
+
+  /* ---- шапка ---- */
+  header{position:relative;z-index:1;text-align:center;padding:60px 20px 26px;}
+  h1{font-size:clamp(1.5rem,4.5vw,3rem);font-weight:900;letter-spacing:.22em;text-transform:uppercase;
+     text-shadow:0 0 18px rgba(255,45,45,.5),0 0 70px rgba(255,45,45,.25);}
+  .subtitle{margin-top:12px;font-style:italic;color:var(--text-dim);letter-spacing:.08em;}
+  .divider{width:180px;height:1px;margin:26px auto 0;background:linear-gradient(90deg,transparent,var(--neon),transparent);
+     box-shadow:0 0 12px var(--neon-soft);}
+
+  /* ---- сетка карточек: 3 в ряд ---- */
+  main{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:30px 28px 90px;}
+  #cards{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;}
+  @media(max-width:1024px){#cards{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:640px){#cards{grid-template-columns:1fr;}}
+
+  /* ---- карточка ---- */
+  .card{
+    position:relative;overflow:hidden;
+    background:linear-gradient(165deg,#17141f 0%,#100e15 100%);
+    border:1px solid rgba(255,60,60,.14);
+    border-radius:20px;
+    padding:22px 22px 24px;
+    box-shadow:0 10px 30px rgba(0,0,0,.5),0 0 20px rgba(255,45,45,.05);
+    transition:border-color .35s, box-shadow .35s;
+  }
+  @media(hover:hover){
+    .card:hover{
+      border-color:rgba(255,60,60,.45);
+      box-shadow:0 10px 30px rgba(0,0,0,.55),0 0 34px rgba(255,45,45,.22);
+      animation:shake .45s ease;
+    }
+  }
+  .card.shake{
+    animation:shake .45s ease;
+    border-color:rgba(255,60,60,.45);
+    box-shadow:0 10px 30px rgba(0,0,0,.55),0 0 34px rgba(255,45,45,.22);
+  }
+  @keyframes shake{
+    0%,100%{transform:translate(0,0) rotate(0);}
+    20%{transform:translate(-2px,1px) rotate(-.6deg);}
+    40%{transform:translate(2px,-1px) rotate(.5deg);}
+    60%{transform:translate(-1.5px,-1px) rotate(-.4deg);}
+    80%{transform:translate(1.5px,1px) rotate(.3deg);}
+  }
+  /* мистическая рябь, следующая за курсором */
+  .card::after{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(circle at var(--mx,50%) var(--my,50%),
+      rgba(255,55,55,.16), rgba(255,45,45,.05) 30%, transparent 55%);
+    opacity:0;transition:opacity .4s;
+  }
+  .card:hover::after,.card.shake::after{opacity:1;}
+
+  .owner{font-size:1.25rem;font-weight:700;letter-spacing:.06em;}
+  .sub{font-style:italic;color:var(--text-dim);font-size:.92rem;margin-top:2px;}
+
+  /* ---- БОЛЬШОЕ ИЗОБРАЖЕНИЕ ГОТОВОЙ МОДЕЛИ ---- */
+  .model-showcase{
+    position:relative;
+    margin-top:16px;
+    aspect-ratio: 4 / 3;
+    border-radius:14px;
+    overflow:hidden;
+    background:radial-gradient(circle at 50% 50%, #1d1522 0%, #0b0910 85%);
+    border:1px solid rgba(255,60,60,.18);
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:inset 0 0 25px rgba(0,0,0,.8);
+    transition:border-color .4s, box-shadow .4s;
+  }
+  /* Фоновая печать внутри витрины */
+  .model-showcase::before{
+    content:"۞";
+    position:absolute;
+    font-size:7rem;
+    color:rgba(255,45,45,.06);
+    pointer-events:none;
+    user-select:none;
+  }
+  .model-showcase img{
+    position:relative;z-index:1;
+    width:100%;height:100%;
+    object-fit:contain;
+    display:block;
+    transition:transform .5s ease, filter .5s ease;
+  }
+  .card:hover .model-showcase img{
+    transform:scale(1.04);
+  }
+  .model-placeholder{
+    position:relative;z-index:1;
+    text-align:center;
+    color:var(--text-dim);
+    font-size:.75rem;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    padding:16px;
+  }
+  .model-placeholder span{
+    display:block;font-size:2.2rem;color:rgba(255,60,60,.35);margin-bottom:6px;
+  }
+
+  /* когда собраны все детали — модель и карточка вспыхивают неоном */
+  .card.complete{border-color:rgba(255,70,70,.6);box-shadow:0 0 40px rgba(255,45,45,.3);}
+  .card.complete .owner{color:#ffd9d9;text-shadow:0 0 14px rgba(255,60,60,.7);}
+  .card.complete .model-showcase{
+    border-color:rgba(255,60,60,.55);
+    box-shadow:0 0 22px rgba(255,45,45,.3), inset 0 0 25px rgba(255,45,45,.18);
+  }
+  .awaken{display:none;margin-top:12px;font-size:.68rem;letter-spacing:.3em;color:var(--neon);
+    text-transform:uppercase;animation:pulse 2s infinite;text-align:center;}
+  .card.complete .awaken{display:block;}
+  @keyframes pulse{50%{opacity:.35;}}
+
+  /* ---- детали ---- */
+  .parts{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:10px;margin-top:16px;}
+  .part{text-align:center;}
+  .part .frame{
+    aspect-ratio:1;border-radius:12px;overflow:hidden;
+    border:1px solid rgba(255,255,255,.08);background:#0d0b12;
+    display:flex;align-items:center;justify-content:center;
+    transition:filter .5s, opacity .5s, box-shadow .5s;
+  }
+  .part img{width:100%;height:100%;object-fit:cover;display:block;}
+  .part .ph{font-size:1.5rem;color:#6b6558;}
+  /* несобранная деталь — тусклая */
+  .part.locked .frame{filter:grayscale(1) brightness(.35);opacity:.6;}
+  /* собранная — яркая с неоном */
+  .part.done .frame{border-color:rgba(255,60,60,.5);box-shadow:0 0 14px rgba(255,45,45,.35),inset 0 0 10px rgba(255,45,45,.15);}
+  .part .pname{margin-top:6px;font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;color:var(--text-dim);}
+  .part.done .pname{color:#f0b8b8;}
+
+  /* ---- прогресс-бар ---- */
+  .progress{margin-top:16px;}
+  .progress .label{display:flex;justify-content:space-between;font-size:.68rem;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--text-dim);margin-bottom:6px;}
+  .bar{height:5px;border-radius:3px;background:rgba(255,255,255,.06);overflow:hidden;}
+  .bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#6e0d0d,var(--neon));
+    box-shadow:0 0 12px rgba(255,45,45,.7);transition:width .8s ease;}
+
+  /* ---- стрелка и выдвижная панель заданий ---- */
+  #taskToggle{
+    position:fixed;top:50%;left:0;transform:translateY(-50%);
+    z-index:80;width:40px;height:90px;
+    background:#16131d;color:var(--neon);
+    border:1px solid rgba(255,60,60,.35);border-left:none;
+    border-radius:0 14px 14px 0;font-size:1.1rem;cursor:pointer;font-family:inherit;
+    transition:left .45s cubic-bezier(.7,0,.2,1),box-shadow .3s;
+    box-shadow:0 0 16px rgba(255,45,45,.15);
+  }
+  #taskToggle:hover{box-shadow:0 0 26px rgba(255,45,45,.45);}
+  body.tasks-open #taskToggle{left:var(--panel-w);}
+  #taskToggle .arrow{display:inline-block;transition:transform .45s;}
+  body.tasks-open #taskToggle .arrow{transform:rotate(180deg);}
+
+  #taskPanel{
+    position:fixed;top:0;left:0;height:100vh;height:100dvh;width:var(--panel-w);
+    transform:translateX(-105%);
+    transition:transform .45s cubic-bezier(.7,0,.2,1);
+    background:linear-gradient(180deg,#12101a,#0c0a11);
+    border-right:1px solid rgba(255,60,60,.3);
+    box-shadow:10px 0 50px rgba(0,0,0,.6);
+    z-index:75;padding:56px 26px 40px;overflow-y:auto;
+  }
+  body.tasks-open #taskPanel{transform:translateX(0);}
+  #taskPanel h2{font-size:.95rem;letter-spacing:.3em;color:var(--neon);text-transform:uppercase;
+    margin-bottom:22px;text-shadow:0 0 12px var(--neon-soft);}
+  #taskPanel ol{list-style:none;counter-reset:t;}
+  #taskPanel li{
+    counter-increment:t;position:relative;
+    padding:14px 0 16px 42px;
+    border-bottom:1px solid rgba(255,255,255,.06);
+  }
+  #taskPanel li::before{
+    content:counter(t,decimal-leading-zero);
+    position:absolute;left:0;top:15px;color:var(--neon);font-weight:700;font-size:.75rem;
+  }
+  /* Заголовок задания — ЖИРНЫЙ ЗАГЛАВНЫМИ */
+  .task-title{
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.12em;
+    font-size:.8rem;
+    line-height:1.45;
+    color:var(--text);
+  }
+  /* Текст под заголовком задания */
+  .task-desc{
+    margin-top:6px;
+    font-weight:400;
+    font-style:italic;
+    font-size:.86rem;
+    line-height:1.5;
+    color:var(--text-dim);
+  }
+
+  /* затемнение фона при открытой панели */
+  #veil{position:fixed;inset:0;background:rgba(5,4,8,.55);opacity:0;pointer-events:none;
+    transition:opacity .4s;z-index:70;}
+  body.tasks-open #veil{opacity:1;pointer-events:auto;}
+
+  /* ---- молнии и вспышка ---- */
+  #lightning{position:fixed;inset:0;z-index:65;pointer-events:none;mix-blend-mode:screen;}
+  #flash{position:fixed;inset:0;z-index:64;pointer-events:none;opacity:0;transition:opacity .12s;}
+
+  /* ---- расходящаяся рябь по касанию ---- */
+  .ripple{
+    position:absolute;width:14px;height:14px;border-radius:50%;
+    transform:translate(-50%,-50%);
+    background:radial-gradient(circle,rgba(255,80,80,.55),rgba(255,45,45,.18) 45%,transparent 70%);
+    mix-blend-mode:screen;pointer-events:none;
+    animation:rip .9s ease-out forwards;
+  }
+  @keyframes rip{0%{opacity:1;}100%{width:460px;height:460px;opacity:0;}}
+
+  @media(max-width:480px){:root{--panel-w:85vw;}}
+  @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important;}}
+</style>
+</head>
+<body>
+
+  <div class="fog a"></div>
+  <div class="fog b"></div>
+  <div id="flash"></div>
+  <canvas id="lightning"></canvas>
+
+  <!-- Стрелка вызова списка заданий -->
+  <button id="taskToggle" aria-label="Список заданий"><span class="arrow">❯</span></button>
+  <aside id="taskPanel">
+    <h2>◆ Испытания ◆</h2>
+    <ol id="taskList"></ol>
+  </aside>
+  <div id="veil"></div>
+
+  <header>
+    <h1>Адский Часовщик</h1>
+    <div class="subtitle">Прогресс сборки модели демона</div>
+    <div class="divider"></div>
+  </header>
+
+  <main><div id="cards"></div></main>
+
+<script>
+/* ══════════════════════════════════════════════════════════════
+   ✎ МЕСТО 1: СПИСОК ЗАДАНИЙ И ТЕКСТ ПОД НИМИ (выдвижная панель)
+   title — заголовок задания (отобразится ЖИРНЫМ ЗАГЛАВНЫМИ)
+   text  — описание задания под заголовком (если не нужно, оставьте "")
+   ══════════════════════════════════════════════════════════════ */
+const TASKS = [
+  {
+    title: "Голова",
+    text: "Задание"
+  },
+  {
+    title: "Рога",
+    text: "Задание"
+  },
+  {
+    title: "Шейный узел",
+    text: "Задание"
+  },
+  {
+    title: "Ушные пластины",
+    text: "Задание"
+  },
+  {
+    title: "Ключ завода",
+    text: "Задание"
+  },
+  {
+    title: "Грудная клетка",
+    text: "Задание"
+  },
+  {
+    title: "Спинной блок",
+    text: "Задание"
+  },
+  {
+    title: "Крылья",
+    text: "Задание"
+  },
+  {
+    title: "Хвост",
+    text: "Задание"
+  },
+  {
+    title: "Передние лапы",
+    text: "Задание"
+  },
+  {
+    title: "Задние лапы",
+    text: "Задание"
+  },
+  {
+    title: "Ядро энергии",
+    text: "Задание"
+  },
+  {
+    title: "Крепления",
+    text: "Задание"
+  },
+  {
+    title: "Пьедестал",
+    text: "Задание"
+  }
+];
+
+/* ══════════════════════════════════════════════════════════════
+   ✎ МЕСТО 2: КАРТОЧКИ УЧЕНИКОВ И БОЛЬШАЯ КАРТИНКА МОДЕЛИ
+   owner    — имя владельца;
+   subtitle — подпись курсивом ниже;
+   modelImg — ПУТЬ К БОЛЬШОЙ КАРТИНКЕ ГОТОВОЙ МОДЕЛИ (например: "img/demon_full.png");
+   parts    — список деталей (img — картинка детали, done: true/false — собрана или нет).
+   ══════════════════════════════════════════════════════════════ */
+const CARDS = [
+  {
+    owner: "Имя участника",
+    subtitle: "комментарий",
+    modelImg: "", // <-- СЮДА вставить ссылку или путь к большой картинке модели
+    parts: [
+      { name: "Голова",   img: "Деталь - Голова.png", done: true  },
+      { name: "Рога",      img: "Деталь - Рога.png", done: true  },
+      { name: "Шейный узел", img: "Деталь - Шейный узел.png", done: true  },
+      { name: "Ушные пластины",        img: "Деталь - Ушные пластины.png", done: false },
+      { name: "Ключ завода",        img: "Деталь - Ключ завода.png", done: false },
+      { name: "Грудная клетка",      img: "Деталь - Грудная клетка.png", done: false },
+      { name: "Спинной блок",      img: "Деталь - Спинной блок.png", done: false },
+      { name: "Крылья",      img: "Деталь - Крылья.png", done: false },
+      { name: "Хвост",      img: "Деталь - Хвост.png", done: false },
+      { name: "Передние лапы",      img: "Деталь - Передние лапы.png", done: false },
+      { name: "Задние лапы",      img: "Деталь - Задние лапы.png", done: false },
+      { name: "Ядро энергии",      img: "Деталь - Ядро энергии.png", done: false },
+      { name: "Крепления",      img: "Деталь - Крепления.png", done: false },
+      { name: "Пьедестал",      img: "Деталь - Пьедестал.png", done: false }
+    ]
+  },
+  {
+    owner: "Имя участника",
+    subtitle: "комментарий",
+    modelImg: "Адский часовщик собранный.png", // <-- СЮДА вставить ссылку или путь к большой картинке модели
+    parts: [
+      { name: "Голова",   img: "Деталь - Голова.png", done: true  },
+      { name: "Рога",      img: "Деталь - Рога.png", done: true  },
+      { name: "Шейный узел", img: "Деталь - Шейный узел.png", done: true  },
+      { name: "Ушные пластины",        img: "Деталь - Ушные пластины.png", done: true },
+      { name: "Ключ завода",        img: "Деталь - Ключ завода.png", done: true },
+      { name: "Грудная клетка",      img: "Деталь - Грудная клетка.png", done: true },
+      { name: "Спинной блок",      img: "Деталь - Спинной блок.png", done: true },
+      { name: "Крылья",      img: "Деталь - Крылья.png", done: true },
+      { name: "Хвост",      img: "Деталь - Хвост.png", done: true },
+      { name: "Передние лапы",      img: "Деталь - Передние лапы.png", done: true },
+      { name: "Задние лапы",      img: "Деталь - Задние лапы.png", done: true },
+      { name: "Ядро энергии",      img: "Деталь - Ядро энергии.png", done: true },
+      { name: "Крепления",      img: "Деталь - Крепления.png", done: true },
+      { name: "Пьедестал",      img: "Деталь - Пьедестал.png", done: true }
+    ]
+  },
+  {
+    owner: "Имя участника",
+    subtitle: "комментарий",
+    modelImg: "", // <-- СЮДА вставить ссылку или путь к большой картинке модели
+    parts: [
+      { name: "Голова",   img: "Деталь - Голова.png", done: false  },
+      { name: "Рога",      img: "Деталь - Рога.png", done: false  },
+      { name: "Шейный узел", img: "Деталь - Шейный узел.png", done: false  },
+      { name: "Ушные пластины",        img: "Деталь - Ушные пластины.png", done: false },
+      { name: "Ключ завода",        img: "Деталь - Ключ завода.png", done: false },
+      { name: "Грудная клетка",      img: "Деталь - Грудная клетка.png", done: false },
+      { name: "Спинной блок",      img: "Деталь - Спинной блок.png", done: false },
+      { name: "Крылья",      img: "Деталь - Крылья.png", done: false },
+      { name: "Хвост",      img: "Деталь - Хвост.png", done: false },
+      { name: "Передние лапы",      img: "Деталь - Передние лапы.png", done: false },
+      { name: "Задние лапы",      img: "Деталь - Задние лапы.png", done: false },
+      { name: "Ядро энергии",      img: "Деталь - Ядро энергии.png", done: false },
+      { name: "Крепления",      img: "Деталь - Крепления.png", done: false },
+      { name: "Пьедестал",      img: "Деталь - Пьедестал.png", done: false }
+    ]
+  }
+];
+
+/* ═══════════════ ДАЛЬШЕ КОД МЕНЯТЬ НЕ НУЖНО ═══════════════ */
+
+/* ---- рендер списка заданий ---- */
+const taskList = document.getElementById('taskList');
+TASKS.forEach(t => {
+  const li = document.createElement('li');
+  li.innerHTML = `
+    <div class="task-title">${t.title}</div>
+    ${t.text ? `<div class="task-desc">${t.text}</div>` : ''}
+  `;
+  taskList.appendChild(li);
+});
+
+/* ---- рендер карточек ---- */
+const cardsEl = document.getElementById('cards');
+
+function spawnRipple(card, x, y){
+  const s = document.createElement('span');
+  s.className = 'ripple';
+  s.style.left = x + 'px';
+  s.style.top  = y + 'px';
+  card.appendChild(s);
+  setTimeout(() => s.remove(), 950);
+}
+
+CARDS.forEach(c => {
+  const done  = c.parts.filter(p => p.done).length;
+  const total = c.parts.length;
+  const pct   = total ? Math.round(done / total * 100) : 0;
+
+  const card = document.createElement('article');
+  card.className = 'card' + (done === total && total > 0 ? ' complete' : '');
+  card.innerHTML = `
+    <div class="owner">${c.owner}</div>
+    <div class="sub">${c.subtitle}</div>
+
+    <div class="model-showcase">
+      ${c.modelImg
+        ? `<img src="${c.modelImg}" alt="Модель: ${c.owner}">`
+        : `<div class="model-placeholder"><span>⛧</span></div>`
+      }
+    </div>
+
+    <div class="parts">
+      ${c.parts.map(p => `
+        <div class="part ${p.done ? 'done' : 'locked'}">
+          <div class="frame">${p.img ? `<img src="${p.img}" alt="${p.name}">` : `<span class="ph">◈</span>`}</div>
+          <div class="pname">${p.name}</div>
+        </div>`).join('')}
+    </div>
+    <div class="progress">
+      <div class="label"><span>Собрано</span><span>${done} / ${total}</span></div>
+      <div class="bar"><i style="width:${pct}%"></i></div>
+    </div>
+    <div class="awaken">◆ Модель демона активирована ◆</div>
+  `;
+
+  /* рябь следует за курсором */
+  card.addEventListener('mousemove', e => {
+    const r = card.getBoundingClientRect();
+    card.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+    card.style.setProperty('--my', (e.clientY - r.top)  + 'px');
+  });
+
+  /* встряхивание + рябь по клику/касанию */
+  const poke = e => {
+    card.classList.remove('shake');
+    void card.offsetWidth;
+    card.classList.add('shake');
+    const r = card.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] : e;
+    spawnRipple(card, t.clientX - r.left, t.clientY - r.top);
+  };
+  card.addEventListener('touchstart', poke, {passive:true});
+  card.addEventListener('click', poke);
+
+  cardsEl.appendChild(card);
+});
+
+/* ---- выдвижная панель ---- */
+document.getElementById('taskToggle').addEventListener('click', () =>
+  document.body.classList.toggle('tasks-open'));
+document.getElementById('veil').addEventListener('click', () =>
+  document.body.classList.remove('tasks-open'));
+
+/* ---- красные молнии (рандомно, в разных местах) ---- */
+const cv = document.getElementById('lightning');
+const ctx = cv.getContext('2d');
+const flashEl = document.getElementById('flash');
+
+function resize(){ cv.width = innerWidth; cv.height = innerHeight; }
+addEventListener('resize', resize);
+resize();
+
+function bolt(x1, y1, x2, y2, disp){
+  if (disp < 6){ ctx.lineTo(x2, y2); return; }
+  const mx = (x1 + x2) / 2 + (Math.random() - .5) * disp;
+  const my = (y1 + y2) / 2 + (Math.random() - .5) * disp;
+  bolt(x1, y1, mx, my, disp / 2);
+  bolt(mx, my, x2, y2, disp / 2);
+  if (Math.random() < 0.08){
+    ctx.moveTo(mx, my);
+    bolt(mx, my, mx + (Math.random() - .5) * 160, my + Math.random() * 120, disp / 2);
+    ctx.moveTo(mx, my);
+  }
+}
+
+function strike(){
+  const sx = Math.random() * cv.width;
+  const sy = Math.random() < .5 ? 0 : Math.random() * cv.height * .25;
+  const ex = sx + (Math.random() - .5) * cv.width * .3;
+  const ey = cv.height * (.45 + Math.random() * .55);
+
+  const draw = () => {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(255,30,30,.45)';
+    ctx.lineWidth = 5;
+    ctx.shadowColor = '#ff2020';
+    ctx.shadowBlur = 28;
+    ctx.beginPath(); ctx.moveTo(sx, sy); bolt(sx, sy, ex, ey, 90); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,210,210,.85)';
+    ctx.lineWidth = 1.4;
+    ctx.shadowBlur = 12;
+    ctx.beginPath(); ctx.moveTo(sx, sy); bolt(sx, sy, ex, ey, 90); ctx.stroke();
+  };
+
+  draw();
+  flashEl.style.background = `radial-gradient(circle at ${sx / cv.width * 100}% ${sy / cv.height * 100}%, rgba(255,45,45,.28), transparent 55%)`;
+  flashEl.style.opacity = 1;
+  setTimeout(() => flashEl.style.opacity = 0, 110);
+
+  setTimeout(() => {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    if (Math.random() < .6){
+      draw();
+      setTimeout(() => ctx.clearRect(0, 0, cv.width, cv.height), 70);
+    }
+  }, 90 + Math.random() * 60);
+
+  setTimeout(strike, 1800 + Math.random() * 5500);
+}
+setTimeout(strike, 1200);
+</script>
+</body>
+</html>
